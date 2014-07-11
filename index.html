@@ -12,9 +12,270 @@ body{font-family: Source Sans Pro, Sans, Helvetica Neue, sans-serif;}
 </head>
 <body> 
 <div class="container">
-<h1>satv2</h1>
+
+<h1 id="satv2">satv2</h1>
 <p>The <a href="https://github.com/pharpend/sat-vocab-test">old code</a> is so terrible that I think it's time to write a replacement. What better way to show you how it works than to write it from scratch?</p>
-<p>The first thing to do is to look at the data - the data is stored in a poorly formatted text file. You can view it <a href="https://raw.githubusercontent.com/pharpend/sat-vocab-test/master/sat_vocab_text.txt">here</a></p>
+<p>I'll be following this tutorial pretty much to the letter. You can see what I'm doing <a href="https://github.com/pharpend/satv2">on GitHub</a>.</p>
+<h1 id="first-thing-get-stuff.">First thing, get stuff.</h1>
+<p>I'm going to write this in Python 3, simply because I have my editor set up to use Python 3 for completion and what not. Also, Python 3 has been around for, what, 8 years? Time to upgrade.</p>
+<p>So, install Python 3, and git. Because git is nice.</p>
+<p>You'll also want to make a directory for the new program.</p>
+<pre><code>mkdir satv2
+cd satv2
+git init</code></pre>
+<h1 id="get-the-data">Get the data</h1>
+<p>The <del>first</del> second thing to do is to look at the data - the data is stored in a <a href="https://raw.githubusercontent.com/pharpend/sat-vocab-test/master/sat_vocab_text.txt">poorly formatted text file</a>.</p>
+<p>We need to convert that text into a more Python-friendly format. JSON is my vote. Python also has a good XML library, but JSON is more familiar to me.</p>
+<p>To quickly download the data file, run</p>
+<pre><code>curl https://raw.githubusercontent.com/pharpend/sat-vocab-test/master/sat_vocab_text.txt -o definitions.txt</code></pre>
+<p>Next, we're going to commit the definitions file</p>
+<pre><code>git add definitions.txt
+git commit -m &quot;Initial commit, contains definitions file.&quot;</code></pre>
+<h1 id="convert-the-data-to-json">Convert the data to JSON</h1>
+<p>We're going to write a little script to convert that text to JSON. The first thing to do is to read the file.</p>
+<pre class="sourceCode python"><code class="sourceCode python">def_handle = <span class="dt">open</span>(<span class="st">&quot;definitions.txt&quot;</span>, <span class="st">&quot;r&quot;</span>)
+def_text = def_handle.read()
+def_handle.close()</code></pre>
+<p>We're going to want to put all of the lines into a list.</p>
+<pre class="sourceCode python"><code class="sourceCode python">def_lines = def_text.splitlines()</code></pre>
+<p>Here's the output of <code>def_lines[:5]</code>:</p>
+<pre><code>[&#39;abase v. To lower in position, estimation, or the like; degrade.&#39;,
+ &#39;abbess n. The lady superior of a nunnery. &#39;,
+ &#39;abbey n. The group of buildings which collectively form the dwelling-place of a society of monks or nuns&#39;,
+ &#39;abbot n. The superior of a community of monks. &#39;,
+ &#39;abdicate v. To give up (royal power or the like). &#39;]</code></pre>
+<p>Next, we're going to want to split each line into individual words.</p>
+<pre class="sourceCode python"><code class="sourceCode python">def_words = [line.split() <span class="kw">for</span> line in def_lines]</code></pre>
+<p>Here's the first 5 elements:</p>
+<pre><code>[[&#39;abase&#39;, &#39;v.&#39;, &#39;To&#39;, &#39;lower&#39;, &#39;in&#39;, &#39;position,&#39;, &#39;estimation,&#39;, &#39;or&#39;, &#39;the&#39;, &#39;like;&#39;, &#39;degrade.&#39;],
+ [&#39;abbess&#39;, &#39;n.&#39;, &#39;The&#39;, &#39;lady&#39;, &#39;superior&#39;, &#39;of&#39;, &#39;a&#39;, &#39;nunnery.&#39;],
+ [&#39;abbey&#39;, &#39;n.&#39;, &#39;The&#39;, &#39;group&#39;, &#39;of&#39;, &#39;buildings&#39;, &#39;which&#39;, &#39;collectively&#39;, &#39;form&#39;, &#39;the&#39;, &#39;dwelling-place&#39;, &#39;of&#39;, &#39;a&#39;, &#39;society&#39;, &#39;of&#39;, &#39;monks&#39;, &#39;or&#39;, &#39;nuns&#39;],
+ [&#39;abbot&#39;, &#39;n.&#39;, &#39;The&#39;, &#39;superior&#39;, &#39;of&#39;, &#39;a&#39;, &#39;community&#39;, &#39;of&#39;, &#39;monks.&#39;],
+ [&#39;abdicate&#39;, &#39;v.&#39;, &#39;To&#39;, &#39;give&#39;, &#39;up&#39;, &#39;(royal&#39;, &#39;power&#39;, &#39;or&#39;, &#39;the&#39;, &#39;like).&#39;]]</code></pre>
+<p>Next, we're going to want to group those words. The first word is the <code>word</code>. The second word is the <code>pos</code>, or &quot;part of speech&quot;. The remainder is the <code>def</code>, or &quot;definition.&quot;</p>
+<pre><code>def_groups = [(g[0], g[1][:-1], &quot; &quot;.join(g[2:])) for g in def_words]</code></pre>
+<p>Here are the first 5 entries</p>
+<pre><code>[(&#39;abase&#39;, &#39;v&#39;, &#39;To lower in position, estimation, or the like; degrade.&#39;),
+ (&#39;abbess&#39;, &#39;n&#39;, &#39;The lady superior of a nunnery.&#39;),
+ (&#39;abbey&#39;, &#39;n&#39;, &#39;The group of buildings which collectively form the dwelling-place of a society of monks or nuns&#39;),
+ (&#39;abbot&#39;, &#39;n&#39;, &#39;The superior of a community of monks.&#39;),
+ (&#39;abdicate&#39;, &#39;v&#39;, &#39;To give up (royal power or the like).&#39;)]</code></pre>
+<p>Next, we want to turn each of these entries into an associative list, or &quot;dictionary&quot; in Python terms.</p>
+<pre><code>keys = (&quot;word&quot;, &quot;pos&quot;, &quot;def&quot;)
+def_dicts = [dict(zip(keys, vals)) for vals in def_groups]</code></pre>
+<p>Here are the first 5 entries</p>
+<pre><code>[{&#39;pos&#39;: &#39;v.&#39;,
+  &#39;def&#39;: &#39;To lower in position, estimation, or the like; degrade.&#39;,
+  &#39;word&#39;: &#39;abase&#39;},
+ {&#39;pos&#39;: &#39;n.&#39;, &#39;def&#39;: &#39;The lady superior of a nunnery.&#39;, &#39;word&#39;: &#39;abbess&#39;},
+ {&#39;pos&#39;: &#39;n.&#39;,
+  &#39;def&#39;: &#39;The group of buildings which collectively form the dwelling-place of a society of monks or nuns&#39;,
+  &#39;word&#39;: &#39;abbey&#39;},
+ {&#39;pos&#39;: &#39;n.&#39;,
+  &#39;def&#39;: &#39;The superior of a community of monks.&#39;,
+  &#39;word&#39;: &#39;abbot&#39;},
+ {&#39;pos&#39;: &#39;v.&#39;,
+  &#39;def&#39;: &#39;To give up (royal power or the like).&#39;,
+  &#39;word&#39;: &#39;abdicate&#39;}]</code></pre>
+<p>We're going to create two separate JSON files - one that is prettily encoded, so humans can read it, and one that is compressed, with no line breaks or indentation, so our program can read it quickly.</p>
+<pre><code>import json
+pretty_encoder = json.JSONEncoder(indent=2)
+ugly_encoder = json.JSONEncoder(separators=(&quot;,&quot;, &quot;:&quot;))</code></pre>
+<p>To encode</p>
+<pre><code>pretty_encoded = pretty_encoder.encode(def_dicts)
+ugly_encoded = ugly_encoder.encode(def_dicts)</code></pre>
+<p>Here are the first 256 characters of <code>pretty_encoded</code>.</p>
+<pre><code>[
+  {
+    &quot;pos&quot;: &quot;v&quot;,
+    &quot;def&quot;: &quot;To lower in position, estimation, or the like; degrade.&quot;,
+    &quot;word&quot;: &quot;abase&quot;
+  },
+  {
+    &quot;pos&quot;: &quot;n&quot;,
+    &quot;def&quot;: &quot;The lady superior of a nunnery.&quot;,
+    &quot;word&quot;: &quot;abbess&quot;
+  },
+  {
+    &quot;pos&quot;: &quot;n&quot;,
+    &quot;def&quot;: &quot;The group of bu</code></pre>
+<p>By contrast, here are the first 256 characters of <code>ugly_encoded</code>.</p>
+<pre><code>[{&quot;pos&quot;:&quot;v&quot;,&quot;def&quot;:&quot;To lower in position, estimation, or the like; degrade.&quot;,&quot;word&quot;:&quot;abase&quot;},{&quot;pos&quot;:&quot;n&quot;,&quot;def&quot;:&quot;The lady superior of a nunnery.&quot;,&quot;word&quot;:&quot;abbess&quot;},{&quot;pos&quot;:&quot;n&quot;,&quot;def&quot;:&quot;The group of buildings which collectively form the dwelling-place of a society</code></pre>
+<p>Next, we're going to want to write this JSON to files.</p>
+<pre><code>pretty_handle = open(&quot;defs-pretty.json&quot;, &quot;w&quot;)
+pretty_handle.write(pretty_encoded)
+pretty_handle.close()
+
+ugly_handle = open(&quot;defs-ugly.json&quot;, &quot;w&quot;)
+ugly_handle.write(ugly_encoded)
+ugly_handle.close()</code></pre>
+<p>Here's the entire script, in a file called <code>json-migrator.py</code>.</p>
+<pre><code>def_handle = open(&quot;definitions.txt&quot;, &quot;r&quot;)
+def_text = def_handle.read()
+def_handle.close()
+
+def_lines = def_text.splitlines()
+def_words = [line.split() for line in def_lines]
+
+def_groups = [(g[0], g[1][:-1], &quot; &quot;.join(g[2:])) for g in def_words]
+
+keys = (&quot;word&quot;, &quot;pos&quot;, &quot;def&quot;)
+def_dicts = [dict(zip(keys, vals)) for vals in def_groups]
+
+import json
+pretty_encoder = json.JSONEncoder(indent=2)
+ugly_encoder = json.JSONEncoder(separators=(&quot;,&quot;, &quot;:&quot;))
+
+pretty_encoded = pretty_encoder.encode(def_dicts)
+ugly_encoded = ugly_encoder.encode(def_dicts)
+
+pretty_handle = open(&quot;defs-pretty.json&quot;, &quot;w&quot;)
+pretty_handle.write(pretty_encoded)
+pretty_handle.close()
+
+ugly_handle = open(&quot;defs-ugly.json&quot;, &quot;w&quot;)
+ugly_handle.write(ugly_encoded)
+ugly_handle.close()</code></pre>
+<h2 id="commit-your-changes">Commit your changes</h2>
+<p>Next, we're going to commit everything. We no longer need the old text file, so we'll go ahead and delete it.</p>
+<pre><code>git add .
+git rm definitions.txt
+git commit -m &quot;Converted the definitions file to JSON.&quot;</code></pre>
+<p>We no longer need the converter script, so we'll delete it.</p>
+<pre><code>git rm json-migrator.py
+git commit -m  &quot;Removed the migrator script.&quot;</code></pre>
+<h1 id="writing-the-actual-tester">Writing the actual tester</h1>
+<p>This section concerns writing the thing that actually quizzes people.</p>
+<p>First, we're going to open a file called <code>satv2.py</code>. Since this is production code, we do need to document it. We'll first add in a little prelude</p>
+<pre><code>#!/usr/bin/env python3
+
+&quot;&quot;&quot;satv2 - version 2 of the SAT tester.
+
+This program quizzes people on SAT vocabulary.
+&quot;&quot;&quot;
+
+import json</code></pre>
+<h2 id="marshal-the-json-data-into-a-python-data-type">Marshal the JSON data into a Python data type</h2>
+<p>First, we should make a dummy <code>main</code> function.</p>
+<pre><code>def main():
+    return
+
+if &#39;__main__&#39; == __name__:
+    main()</code></pre>
+<p>From now on, each successive code snippet listed here should precede the others in your file.</p>
+<p>This program doesn't actually do anything so far. The first thing we'll want to do is write a function to marshal the file text into our <code>Vocab</code> type.</p>
+<pre><code>def marshal_json_text(text):
+    &quot;&quot;&quot;Marshal json text into dict&quot;&quot;&quot;
+    defs_dicts = json.loads(text)
+    return defs_dicts</code></pre>
+<p>We'll also want a function to read the <code>defs-ugly.json</code> file.</p>
+<pre><code>def read_ugly_file():
+    &quot;&quot;&quot;Read the defs-ugly.json file.&quot;&quot;&quot;
+    ugly_handle = open(&quot;defs-ugly.json&quot;, &quot;r&quot;)
+    ugly_text = ugly_handle.read()
+    ugly_handle.close()
+    return ugly_text</code></pre>
+<p>We'll want a function that composes the two.</p>
+<pre><code>def marshal_ugly_file():
+    &quot;&quot;&quot;Read the defs-ugly.json file, marshal it into a bunch dicts.&quot;&quot;&quot;
+    return marshal_json_text(read_ugly_file())</code></pre>
+<h2 id="in-glorious-haskell">In glorious Haskell</h2>
+<p>I'm a Haskell programmer at heart, so I'm going to digress, for my own sake. In Haskell, I would write something like</p>
+<pre><code>data PartOfSpeech = Noun | Verb | Adjective | Adverb | etc.
+data Vocab = Vocab { word         :: Word
+                   , partOfSpeech :: Pos
+                   , definition   :: Definition
+                   }
+type Word       = Text
+type Pos        = PartOfSpeech
+type Definition = Text
+type WordMap    = Map Word Vocab
+type DefMap     = Map Def Vocab</code></pre>
+<p>and then write <code>FromJSON</code> instances for <code>Word</code>, <code>Pos</code>, and <code>Definition</code>. Why can't Python be Haskell?</p>
+<h2 id="back-to-python">Back to Python</h2>
+<p>Anyway, the equivalent in Python would, I guess, be a dictionary mapping either</p>
+<ul>
+<li>The <code>word</code> to the <code>vocab</code></li>
+<li>The <code>def</code> to the <code>vocab</code></li>
+</ul>
+<p>So, here are the two functions:</p>
+<pre><code># So, here&#39;s the function to make the word map.
+def mk_word_map(vocabs):
+    &quot;&quot;&quot;Takes a bunch of `Vocab` objects, marshals them into the Python equivalent
+    of `WordMap`.&quot;&quot;&quot;
+    wordmap = { v.word: v
+                for v in vocabs }
+    return wordmap
+
+# We&#39;ll also want a function that makes a definition map
+def mk_def_map(vocabs):
+    &quot;&quot;&quot;Takes a bunch of `Vocab` objects, marshals them into the Python equivalent
+    of a `DefMap`.&quot;&quot;&quot;
+    defmap = { v.definition: v
+               for v in vocabs }
+    return defmap</code></pre>
+<h3 id="librarizing">Librarizing</h3>
+<p>The next thing to do is to move the JSON stuff to it's own file. Here are the various files. First, <code>satjson.py</code></p>
+<pre><code>&quot;&quot;&quot;JSON interface for satv2&quot;&quot;&quot;
+
+import json
+
+def marshal_json_text(text):
+    &quot;&quot;&quot;Marshal json text into a dict&quot;&quot;&quot;
+    return json.loads(text)
+
+def read_ugly_file():
+    &quot;&quot;&quot;Read the defs-ugly.json file.&quot;&quot;&quot;
+    ugly_handle = open(&quot;defs-ugly.json&quot;, &quot;r&quot;)
+    ugly_text = ugly_handle.read()
+    ugly_handle.close()
+    return ugly_text
+
+def marshal_ugly_file():
+    &quot;&quot;&quot;Read the defs-ugly.json file, marshal it into a bunch of dicts.&quot;&quot;&quot;
+    return marshal_json_text(read_ugly_file())</code></pre>
+<p>Next, <code>satv2.py</code></p>
+<pre><code>#!/usr/bin/env python3
+
+&quot;&quot;&quot;satv2 - version 2 of the SAT tester.
+
+This program quizzes people on SAT vocabulary.
+&quot;&quot;&quot;
+
+def main():
+    &quot;&quot;&quot;The main function, runs everything&quot;&quot;&quot;
+    return
+
+if &#39;__main__&#39; == __name__:
+    main()</code></pre>
+<h2 id="a-little-bit-of-testing">A little bit of testing</h2>
+<p>We're going to modify <code>main</code> to make sure we can read the file</p>
+<pre><code>def main():
+    &quot;&quot;&quot;The main function, runs everything&quot;&quot;&quot;
+    vs = satjson.marshal_ugly_file()
+    pprint.pprint(vs[:5])</code></pre>
+<p>You'll also want to add <code>import satjson, pprint</code> to the top of the file</p>
+<p>Run <code>python satv2.py</code>, and the output should look a little bit like this:</p>
+<pre><code>[{&#39;def&#39;: &#39;To lower in position, estimation, or the like; degrade.&#39;,
+  &#39;pos&#39;: &#39;v&#39;,
+  &#39;word&#39;: &#39;abase&#39;},
+ {&#39;def&#39;: &#39;The lady superior of a nunnery.&#39;, &#39;pos&#39;: &#39;n&#39;, &#39;word&#39;: &#39;abbess&#39;},
+ {&#39;def&#39;: &#39;The group of buildings which collectively form the dwelling-place &#39;
+         &#39;of a society of monks or nuns&#39;,
+  &#39;pos&#39;: &#39;n&#39;,
+  &#39;word&#39;: &#39;abbey&#39;},
+ {&#39;def&#39;: &#39;The superior of a community of monks.&#39;, &#39;pos&#39;: &#39;n&#39;, &#39;word&#39;: &#39;abbot&#39;},
+ {&#39;def&#39;: &#39;To give up (royal power or the like).&#39;,
+  &#39;pos&#39;: &#39;v&#39;,
+  &#39;word&#39;: &#39;abdicate&#39;}]</code></pre>
+<p>You'll want to commit your changes</p>
+<pre><code>git add .
+git commit -m &quot;Marshal JSON back into Python types.&quot;</code></pre>
+<h1 id="what-next">What next?</h1>
+<p>Next, you'll want to add an interface, that actually quizzes people. So far, I've shown you how to get the data from files. It should be pretty obvious how to proceed from here.</p>
+<p>How you design your interface, or what type of interface, is entirely up to you.</p>
+<p>You can see the work as of now <a href="https://github.com/pharpend/satv2">on GitHub</a>.</p>
+<p>Once you design that, you need to pick a license, write a README, and write a lot of documentation on usage.</p>
 </div>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"> </script>
